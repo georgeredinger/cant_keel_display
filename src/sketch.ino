@@ -1,3 +1,4 @@
+#include <Adafruit_NeoPixel.h>
 /*
    LED bar graph - decay version
    break into 2 ranges mapped to 4 leds each
@@ -9,6 +10,15 @@ const int portLedPins[] = { 2, 3, 4, 5};
 const int starboardLedPins[] = { 6, 7, 8, 9};
 const int NbrLEDs = 4;
 
+// Parameter 1 = number of pixels in strip
+// Parameter 2 = pin number (most are valid)
+// Parameter 3 = pixel type flags, add together as needed:
+//   NEO_RGB     Pixels are wired for RGB bitstream
+//   NEO_GRB     Pixels are wired for GRB bitstream
+//   NEO_KHZ400  400 KHz bitstream (e.g. FLORA pixels)
+//   NEO_KHZ800  800 KHz bitstream (e.g. High Density LED strip)
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, 12, NEO_GRB + NEO_KHZ800);
+
 void setup() {
 	  Serial.begin(115200);
     for (int led = 0; led < NbrLEDs; led++)
@@ -18,7 +28,11 @@ void setup() {
         pinMode(starboardLedPins[led], OUTPUT);
 
    pinMode(9, OUTPUT); // how come pin 9 is not being set in loop?
+   pinMode(11, OUTPUT); // how come pin 9 is not being set in loop?
 
+   strip.begin();
+   strip.show(); // Initialize all pixels to 'off'
+	 Serial.println("LED demo");
 }
 
 int readkeel() {
@@ -35,12 +49,17 @@ void allOff(){
 }
 
 void loop() {
-	  delay(100);
+	  bool port=false;
+		long color;
+	  int red,green;	
+
+	  delay(200);
     int keelAngle = readkeel();
 		Serial.println(keelAngle);
 		int ledLevel;
 		allOff();
     if(keelAngle <= 0 ) { //port?
+			port=true;
 			keelAngle = -keelAngle;
         ledLevel = map(keelAngle, 0,45 , 0, NbrLEDs); // map to number of LEDs
         for (int led = 0; led < NbrLEDs; led++) {
@@ -54,6 +73,7 @@ void loop() {
     }
     else //starboard??
     {
+			port=false;
         ledLevel = map(keelAngle, 0,45 , 0, NbrLEDs); // map to number of LEDs
         for (int led = 0; led < NbrLEDs; led++) {
             if (led <= ledLevel ) {
@@ -64,5 +84,23 @@ void loop() {
             }
         }
     }
-
+//drive neopixels
+		if(port) {
+			color = 0x00f00;
+			red=0;green=1;
+		}else {
+			color = 0x0f0000;
+			green=0;red=1;
+		}
+		for (int led = 0; led < NbrLEDs; led++) {
+			if (led < ledLevel ) {
+			  	  strip.setPixelColor(led, red*0xff,green*0xff,0);
+			}
+			else {
+				strip.setPixelColor(led, 0);
+			}
+		}
+		strip.setPixelColor(ledLevel, abs(keelAngle-ledLevel*11)*23*red,abs(keelAngle-ledLevel*11)*23*green,0);
+		strip.show();
 }
+
